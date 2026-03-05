@@ -1,4 +1,5 @@
-import { IsOptional, IsString } from "class-validator";
+import { IsEnum, IsOptional, IsString } from "class-validator";
+import { SurveyItemResponse } from "@prisma/client";
 
 export class CreateSurveyDto {
   @IsString()
@@ -9,4 +10,23 @@ export class CreateSurveyDto {
 
   @IsOptional()
   scheduledAt?: string;
+}
+
+export class AddSurveyItemDto {
+  @IsString()
+  label!: string;
+}
+
+export class UpdateSurveyItemDto {
+  @IsOptional()
+  @IsEnum(SurveyItemResponse)
+  response?: SurveyItemResponse;
+
+  @IsOptional()
+  @IsString()
+  notes?: string;
+
+  @IsOptional()
+  @IsString()
+  photoObjectKey?: string;
 }

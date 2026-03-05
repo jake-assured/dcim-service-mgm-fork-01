@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Headers, Param, Post, Req } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { SurveysService } from "./surveys.service";
-import { CreateSurveyDto } from "./dto";
+import { AddSurveyItemDto, CreateSurveyDto, UpdateSurveyItemDto } from "./dto";
 import { Roles } from "../auth/roles.decorator";
 import { Role } from "@prisma/client";
 import { UseGuards } from "@nestjs/common";
@@ -30,6 +30,20 @@ export class SurveysController {
     return this.surveys.listForClient(clientId);
   }
 
+  @Get(":id")
+  @Roles(
+    Role.ADMIN,
+    Role.SERVICE_MANAGER,
+    Role.SERVICE_DESK_ANALYST,
+    Role.ENGINEER,
+    Role.CLIENT_VIEWER
+  )
+  async get(@Req() req: any, @Param("id") id: string, @Headers("x-client-id") requestedClientId?: string) {
+    const user = getJwtUser(req);
+    const clientId = resolveClientScope(user, requestedClientId);
+    return this.surveys.getForClient(clientId, id);
+  }
+
   @Post()
   @Roles(Role.ADMIN, Role.SERVICE_MANAGER, Role.SERVICE_DESK_ANALYST)
   async create(
@@ -42,8 +56,43 @@ export class SurveysController {
     return this.surveys.createForClient(clientId, dto);
   }
 
+  @Post(":id/start")
+  @Roles(Role.ADMIN, Role.SERVICE_MANAGER, Role.SERVICE_DESK_ANALYST, Role.ENGINEER)
+  async start(@Req() req: any, @Param("id") id: string, @Headers("x-client-id") requestedClientId?: string) {
+    const user = getJwtUser(req);
+    const clientId = resolveClientScope(user, requestedClientId);
+    return this.surveys.startSurvey(clientId, id);
+  }
+
+  @Post(":id/items")
+  @Roles(Role.ADMIN, Role.SERVICE_MANAGER, Role.SERVICE_DESK_ANALYST, Role.ENGINEER)
+  async addItem(
+    @Req() req: any,
+    @Param("id") id: string,
+    @Body() dto: AddSurveyItemDto,
+    @Headers("x-client-id") requestedClientId?: string
+  ) {
+    const user = getJwtUser(req);
+    const clientId = resolveClientScope(user, requestedClientId);
+    return this.surveys.addItem(clientId, id, dto);
+  }
+
+  @Post(":id/items/:itemId")
+  @Roles(Role.ADMIN, Role.SERVICE_MANAGER, Role.SERVICE_DESK_ANALYST, Role.ENGINEER)
+  async updateItem(
+    @Req() req: any,
+    @Param("id") id: string,
+    @Param("itemId") itemId: string,
+    @Body() dto: UpdateSurveyItemDto,
+    @Headers("x-client-id") requestedClientId?: string
+  ) {
+    const user = getJwtUser(req);
+    const clientId = resolveClientScope(user, requestedClientId);
+    return this.surveys.updateItem(clientId, id, itemId, dto);
+  }
+
   @Post(":id/complete")
-  @Roles(Role.ADMIN, Role.SERVICE_MANAGER, Role.SERVICE_DESK_ANALYST)
+  @Roles(Role.ADMIN, Role.SERVICE_MANAGER, Role.SERVICE_DESK_ANALYST, Role.ENGINEER)
   async complete(@Req() req: any, @Param("id") id: string, @Headers("x-client-id") requestedClientId?: string) {
     const user = getJwtUser(req);
     const clientId = resolveClientScope(user, requestedClientId);
