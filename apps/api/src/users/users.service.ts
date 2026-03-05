@@ -10,8 +10,23 @@ import { JwtUser } from "../auth/request-context";
 import { Prisma, Role } from "@prisma/client";
 import * as bcrypt from "bcryptjs";
 import { CreateUserDto, UpdateUserDto } from "./dto";
+import { isOrgOwnerRole, isOrgSuperRole } from "../auth/role-scope";
 
 const MANAGER_ALLOWED_ROLES: Role[] = [Role.SERVICE_DESK_ANALYST, Role.ENGINEER, Role.CLIENT_VIEWER];
+const ORG_ADMIN_ALLOWED_ROLES: Role[] = [
+  Role.SERVICE_MANAGER,
+  Role.SERVICE_DESK_ANALYST,
+  Role.ENGINEER,
+  Role.CLIENT_VIEWER
+];
+const ORG_OWNER_ALLOWED_ROLES: Role[] = [
+  Role.ORG_OWNER,
+  Role.ORG_ADMIN,
+  Role.SERVICE_MANAGER,
+  Role.SERVICE_DESK_ANALYST,
+  Role.ENGINEER,
+  Role.CLIENT_VIEWER
+];
 
 @Injectable()
 export class UsersService {
@@ -40,9 +55,20 @@ export class UsersService {
   }
 
   private assertCanAssignRole(actor: JwtUser, role: Role) {
-    if (actor.role === Role.ADMIN) {
-      if (role === Role.PUBLIC_USER) {
-        throw new BadRequestException("PUBLIC_USER cannot be managed from internal user management.");
+    if (role === Role.PUBLIC_USER) {
+      throw new BadRequestException("PUBLIC_USER cannot be managed from internal user management.");
+    }
+
+    if (isOrgOwnerRole(actor.role)) {
+      if (!ORG_OWNER_ALLOWED_ROLES.includes(role)) {
+        throw new ForbiddenException("ORG_OWNER can only manage organization and client operational roles.");
+      }
+      return;
+    }
+
+    if (actor.role === Role.ORG_ADMIN) {
+      if (!ORG_ADMIN_ALLOWED_ROLES.includes(role)) {
+        throw new ForbiddenException("ORG_ADMIN can only manage client operational roles.");
       }
       return;
     }
@@ -57,7 +83,7 @@ export class UsersService {
   }
 
   private async resolveTargetClientId(actor: JwtUser, requestedClientId?: string | null) {
-    if (actor.role === Role.ADMIN) {
+    if (isOrgSuperRole(actor.role)) {
       const organizationId = await this.requireOrganizationScope(actor);
       const candidate = requestedClientId ?? actor.clientId ?? null;
       if (!candidate) return null;
@@ -103,7 +129,7 @@ export class UsersService {
     const clientId = await this.resolveTargetClientId(actor, requestedClientId ?? null);
     const where: Prisma.UserWhereInput = {};
 
-    if (actor.role === Role.ADMIN) {
+    if (isOrgSuperRole(actor.role)) {
       where.organizationId = await this.requireOrganizationScope(actor);
       if (clientId) where.clientId = clientId;
     } else if (clientId) {
@@ -133,7 +159,7 @@ export class UsersService {
 
     const clientId = await this.resolveTargetClientId(actor, dto.clientId ?? null);
     const organizationId = await this.requireOrganizationScope(actor);
-    if (dto.role !== Role.ADMIN && !clientId) {
+    if (this.requiresClientScope(dto.role) && !clientId) {
       throw new BadRequestException("clientId is required for non-admin roles.");
     }
     if (!organizationId) {
@@ -177,7 +203,7 @@ export class UsersService {
     if (target.organizationId !== actorOrgId) {
       throw new ForbiddenException("Cross-organization user management is not allowed.");
     }
-    if (actor.role !== Role.ADMIN && target.clientId !== actor.clientId) {
+    if (!isOrgSuperRole(actor.role) && target.clientId !== actor.clientId) {
       throw new ForbiddenException("Cross-client user management is not allowed.");
     }
 
@@ -189,7 +215,7 @@ export class UsersService {
 
     const nextClientId = await this.resolveTargetClientId(actor, dto.clientId ?? target.clientId ?? null);
     const nextRole = dto.role ?? target.role;
-    if (nextRole !== Role.ADMIN && !nextClientId) {
+    if (this.requiresClientScope(nextRole) && !nextClientId) {
       throw new BadRequestException("clientId is required for non-admin roles.");
     }
 
@@ -226,5 +252,9 @@ export class UsersService {
     });
 
     return this.toView(updated);
+  }
+
+  private requiresClientScope(role: Role) {
+    return role !== Role.ORG_OWNER && role !== Role.ORG_ADMIN && role !== Role.ADMIN;
   }
 }

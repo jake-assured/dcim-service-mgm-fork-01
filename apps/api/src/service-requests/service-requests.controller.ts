@@ -19,7 +19,7 @@ export class ServiceRequestsController {
 
   @Get()
   @Roles(
-    Role.ADMIN,
+    Role.ORG_OWNER, Role.ORG_ADMIN, Role.ADMIN,
     Role.SERVICE_MANAGER,
     Role.SERVICE_DESK_ANALYST,
     Role.ENGINEER,
@@ -33,7 +33,7 @@ export class ServiceRequestsController {
 
   @Get(":id")
   @Roles(
-    Role.ADMIN,
+    Role.ORG_OWNER, Role.ORG_ADMIN, Role.ADMIN,
     Role.SERVICE_MANAGER,
     Role.SERVICE_DESK_ANALYST,
     Role.ENGINEER,
@@ -46,7 +46,7 @@ export class ServiceRequestsController {
   }
 
   @Post()
-  @Roles(Role.ADMIN, Role.SERVICE_MANAGER, Role.SERVICE_DESK_ANALYST)
+  @Roles(Role.ORG_OWNER, Role.ORG_ADMIN, Role.ADMIN, Role.SERVICE_MANAGER, Role.SERVICE_DESK_ANALYST)
   async create(
     @Req() req: any,
     @Body() dto: CreateServiceRequestDto,
@@ -59,7 +59,7 @@ export class ServiceRequestsController {
   }
 
   @Post(":id/close")
-  @Roles(Role.ADMIN, Role.SERVICE_MANAGER, Role.SERVICE_DESK_ANALYST)
+  @Roles(Role.ORG_OWNER, Role.ORG_ADMIN, Role.ADMIN, Role.SERVICE_MANAGER, Role.SERVICE_DESK_ANALYST)
   async close(
     @Req() req: any,
     @Param("id") id: string,

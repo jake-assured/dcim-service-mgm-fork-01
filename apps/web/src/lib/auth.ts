@@ -59,6 +59,10 @@ export function clearSession() {
   setCurrentUser(null);
 }
 
+export function isOrgSuperRole(role: string | null | undefined) {
+  return role === "ORG_OWNER" || role === "ORG_ADMIN" || role === "ADMIN";
+}
+
 function inferUserFromToken(token: string | null): CurrentUser | null {
   if (!token) return null;
   const parts = token.split(".");

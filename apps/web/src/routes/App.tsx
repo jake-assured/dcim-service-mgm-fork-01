@@ -2,7 +2,7 @@ import React, { useEffect } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { getToken } from "../lib/auth";
 import { setAuthToken } from "../lib/api";
-import { hasAnyRole, ROLES } from "../lib/rbac";
+import { hasAnyRole, ORG_SUPER_ROLES, ROLES } from "../lib/rbac";
 import LoginPage from "./LoginPage";
 import Shell from "./Shell";
 import DashboardPage from "./DashboardPage";
@@ -45,7 +45,7 @@ export default function App() {
         <Route
           path="triage"
           element={
-            <RequireRoles roles={[ROLES.ADMIN, ROLES.SERVICE_MANAGER, ROLES.SERVICE_DESK_ANALYST]}>
+            <RequireRoles roles={[...ORG_SUPER_ROLES, ROLES.SERVICE_MANAGER, ROLES.SERVICE_DESK_ANALYST]}>
               <TriagePage />
             </RequireRoles>
           }
@@ -59,7 +59,7 @@ export default function App() {
         <Route
           path="clients"
           element={
-            <RequireRoles roles={[ROLES.ADMIN]}>
+            <RequireRoles roles={[...ORG_SUPER_ROLES]}>
               <ClientsPage />
             </RequireRoles>
           }
@@ -67,7 +67,7 @@ export default function App() {
         <Route
           path="users"
           element={
-            <RequireRoles roles={[ROLES.ADMIN, ROLES.SERVICE_MANAGER]}>
+            <RequireRoles roles={[...ORG_SUPER_ROLES, ROLES.SERVICE_MANAGER]}>
               <UsersPage />
             </RequireRoles>
           }

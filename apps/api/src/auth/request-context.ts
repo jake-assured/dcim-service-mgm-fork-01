@@ -1,6 +1,7 @@
 import { BadRequestException, ForbiddenException } from "@nestjs/common";
 import { Role } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
+import { isOrgSuperRole } from "./role-scope";
 
 export type JwtUser = {
   userId: string;
@@ -25,11 +26,11 @@ export async function resolveClientScope(
 ): Promise<string> {
   const requested = requestedClientId?.trim() || undefined;
 
-  if (user.role === Role.ADMIN) {
+  if (isOrgSuperRole(user.role)) {
     const scoped = requested ?? user.clientId ?? undefined;
     if (!scoped) {
       throw new BadRequestException(
-        "Admin requests must include client scope. Provide x-client-id or assign a default clientId."
+        "Org-super requests must include client scope. Provide x-client-id or assign a default clientId."
       );
     }
     const client = await prisma.client.findUnique({

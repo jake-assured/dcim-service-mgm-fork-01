@@ -57,13 +57,14 @@ async function main() {
   const admin = await prisma.user.upsert({
     where: { email: adminEmail },
     update: {
+      role: Role.ORG_OWNER,
       organizationId: organization.id,
       clientId: clientA.id
     },
     create: {
       email: adminEmail,
       passwordHash: await bcrypt.hash("Admin123!", 10),
-      role: Role.ADMIN,
+      role: Role.ORG_OWNER,
       organizationId: organization.id,
       clientId: clientA.id,
       isActive: true

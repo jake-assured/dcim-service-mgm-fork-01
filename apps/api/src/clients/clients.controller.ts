@@ -17,28 +17,28 @@ export class ClientsController {
   constructor(private clients: ClientsService) {}
 
   @Get()
-  @Roles(Role.ADMIN)
+  @Roles(Role.ORG_OWNER, Role.ORG_ADMIN, Role.ADMIN)
   async list(@Req() req: any) {
     const actor = getJwtUser(req);
     return this.clients.list(actor);
   }
 
   @Get(":id")
-  @Roles(Role.ADMIN)
+  @Roles(Role.ORG_OWNER, Role.ORG_ADMIN, Role.ADMIN)
   async get(@Req() req: any, @Param("id") id: string) {
     const actor = getJwtUser(req);
     return this.clients.get(actor, id);
   }
 
   @Post()
-  @Roles(Role.ADMIN)
+  @Roles(Role.ORG_OWNER, Role.ORG_ADMIN, Role.ADMIN)
   async create(@Req() req: any, @Body() dto: CreateClientDto) {
     const actor = getJwtUser(req);
     return this.clients.create(actor, dto);
   }
 
   @Patch(":id")
-  @Roles(Role.ADMIN)
+  @Roles(Role.ORG_OWNER, Role.ORG_ADMIN, Role.ADMIN)
   async update(@Req() req: any, @Param("id") id: string, @Body() dto: UpdateClientDto) {
     const actor = getJwtUser(req);
     return this.clients.update(actor, id, dto);

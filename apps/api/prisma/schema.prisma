@@ -8,6 +8,8 @@ datasource db {
 }
 
 enum Role {
+  ORG_OWNER
+  ORG_ADMIN
   ADMIN
   SERVICE_MANAGER
   SERVICE_DESK_ANALYST
