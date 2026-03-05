@@ -19,7 +19,7 @@ export class AssetsController {
 
   @Get()
   @Roles(
-    Role.ADMIN,
+    Role.ORG_OWNER, Role.ORG_ADMIN, Role.ADMIN,
     Role.SERVICE_MANAGER,
     Role.SERVICE_DESK_ANALYST,
     Role.ENGINEER,
@@ -32,7 +32,7 @@ export class AssetsController {
   }
 
   @Post()
-  @Roles(Role.ADMIN, Role.SERVICE_MANAGER, Role.SERVICE_DESK_ANALYST, Role.ENGINEER)
+  @Roles(Role.ORG_OWNER, Role.ORG_ADMIN, Role.ADMIN, Role.SERVICE_MANAGER, Role.SERVICE_DESK_ANALYST, Role.ENGINEER)
   async create(
     @Req() req: any,
     @Body() dto: CreateAssetDto,

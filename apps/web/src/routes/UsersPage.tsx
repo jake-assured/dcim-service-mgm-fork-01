@@ -23,7 +23,7 @@ import {
 import { api, type ApiError } from "../lib/api";
 import { getCurrentUser } from "../lib/auth";
 import { EmptyState, ErrorState, LoadingState } from "../components/PageState";
-import { hasAnyRole, ROLES } from "../lib/rbac";
+import { hasAnyRole, ORG_SUPER_ROLES, ROLES } from "../lib/rbac";
 
 type UserRecord = {
   id: string;
@@ -45,21 +45,24 @@ type UserDraft = {
   isActive: boolean;
 };
 
-const adminRoles = [
-  ROLES.ADMIN,
+const orgOwnerAssignableRoles = [
+  ROLES.ORG_OWNER,
+  ROLES.ORG_ADMIN,
   ROLES.SERVICE_MANAGER,
   ROLES.SERVICE_DESK_ANALYST,
   ROLES.ENGINEER,
   ROLES.CLIENT_VIEWER
 ];
 
+const orgAdminAssignableRoles = [ROLES.SERVICE_MANAGER, ROLES.SERVICE_DESK_ANALYST, ROLES.ENGINEER, ROLES.CLIENT_VIEWER];
 const managerRoles = [ROLES.SERVICE_DESK_ANALYST, ROLES.ENGINEER, ROLES.CLIENT_VIEWER];
 
 export default function UsersPage() {
   const qc = useQueryClient();
   const currentUser = getCurrentUser();
-  const isAdmin = hasAnyRole([ROLES.ADMIN]);
-  const allowedRoles = isAdmin ? adminRoles : managerRoles;
+  const isOrgSuper = hasAnyRole([...ORG_SUPER_ROLES]);
+  const isOrgOwner = hasAnyRole([ROLES.ORG_OWNER, ROLES.ADMIN]);
+  const allowedRoles = isOrgOwner ? orgOwnerAssignableRoles : isOrgSuper ? orgAdminAssignableRoles : managerRoles;
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -80,7 +83,7 @@ export default function UsersPage() {
 
   const clients = useQuery({
     queryKey: ["clients"],
-    enabled: isAdmin,
+    enabled: isOrgSuper,
     queryFn: async () => (await api.get<Client[]>("/clients")).data
   });
 
@@ -172,7 +175,7 @@ export default function UsersPage() {
                 </MenuItem>
               ))}
             </TextField>
-            {isAdmin ? (
+            {isOrgSuper ? (
               <TextField
                 select
                 label="Client"
@@ -207,7 +210,7 @@ export default function UsersPage() {
       <Card>
         <CardContent>
           <Stack direction={{ xs: "column", md: "row" }} spacing={1.2} sx={{ mb: 2 }}>
-            {isAdmin ? (
+            {isOrgSuper ? (
               <TextField
                 select
                 label="View scope"

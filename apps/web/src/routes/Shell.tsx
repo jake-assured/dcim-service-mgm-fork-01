@@ -30,7 +30,7 @@ import ManageAccountsIcon from "@mui/icons-material/ManageAccounts";
 import ApartmentIcon from "@mui/icons-material/Apartment";
 import { api, revokeAndLogout } from "../lib/api";
 import { getCurrentUser } from "../lib/auth";
-import { hasAnyRole, ROLES } from "../lib/rbac";
+import { hasAnyRole, ORG_SUPER_ROLES, ROLES } from "../lib/rbac";
 import { getSelectedClientId, setSelectedClientId } from "../lib/scope";
 
 const drawerWidth = 280;
@@ -41,15 +41,15 @@ const items = [
     label: "Triage",
     path: "/triage",
     icon: <InboxIcon />,
-    roles: [ROLES.ADMIN, ROLES.SERVICE_MANAGER, ROLES.SERVICE_DESK_ANALYST]
+    roles: [...ORG_SUPER_ROLES, ROLES.SERVICE_MANAGER, ROLES.SERVICE_DESK_ANALYST]
   },
   { label: "Service Requests", path: "/service-requests", icon: <ConfirmationNumberIcon />, roles: Object.values(ROLES) },
   { label: "Incidents", path: "/incidents", icon: <WarningAmberIcon />, roles: Object.values(ROLES) },
   { label: "Tasks", path: "/tasks", icon: <TaskAltIcon />, roles: Object.values(ROLES) },
   { label: "Assets", path: "/assets", icon: <StorageIcon />, roles: Object.values(ROLES) },
   { label: "Surveys & Audits", path: "/surveys", icon: <FactCheckIcon />, roles: Object.values(ROLES) },
-  { label: "Clients", path: "/clients", icon: <ApartmentIcon />, roles: [ROLES.ADMIN] },
-  { label: "Users", path: "/users", icon: <ManageAccountsIcon />, roles: [ROLES.ADMIN, ROLES.SERVICE_MANAGER] }
+  { label: "Clients", path: "/clients", icon: <ApartmentIcon />, roles: [...ORG_SUPER_ROLES] },
+  { label: "Users", path: "/users", icon: <ManageAccountsIcon />, roles: [...ORG_SUPER_ROLES, ROLES.SERVICE_MANAGER] }
 ];
 
 export default function Shell() {
@@ -57,7 +57,7 @@ export default function Shell() {
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const nav = useNavigate();
   const loc = useLocation();
-  const isAdmin = hasAnyRole([ROLES.ADMIN]);
+  const isOrgSuper = hasAnyRole([...ORG_SUPER_ROLES]);
   const [selectedClientId, setSelectedClientIdState] = useState(getSelectedClientId() ?? "");
   const [loggingOut, setLoggingOut] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -67,12 +67,12 @@ export default function Shell() {
 
   const clients = useQuery({
     queryKey: ["clients"],
-    enabled: isAdmin,
+    enabled: isOrgSuper,
     queryFn: async () => (await api.get<Array<{ id: string; name: string }>>("/clients")).data
   });
 
   React.useEffect(() => {
-    if (!isAdmin) return;
+    if (!isOrgSuper) return;
     if ((clients.data?.length ?? 0) === 0) return;
 
     const selected =
@@ -86,7 +86,7 @@ export default function Shell() {
       setSelectedClientIdState(selected);
       setSelectedClientId(selected);
     }
-  }, [clients.data, currentUser?.clientId, isAdmin, selectedClientId]);
+  }, [clients.data, currentUser?.clientId, isOrgSuper, selectedClientId]);
 
   async function onLogout() {
     if (loggingOut) return;
@@ -163,7 +163,7 @@ export default function Shell() {
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1, color: "#1e293b" }}>
             {active}
           </Typography>
-          {isAdmin ? (
+          {isOrgSuper ? (
             <TextField
               select
               size="small"

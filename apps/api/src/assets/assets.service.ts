@@ -1,6 +1,7 @@
 import { BadRequestException, ForbiddenException, Injectable } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { OwnerType, Role } from "@prisma/client";
+import { isOrgSuperRole } from "../auth/role-scope";
 
 @Injectable()
 export class AssetsService {
@@ -9,7 +10,7 @@ export class AssetsService {
   listForClient(clientId: string, role: Role) {
     if (!clientId) throw new ForbiddenException("Missing client scope");
 
-    if (role !== Role.ADMIN) {
+    if (!isOrgSuperRole(role)) {
       // Harden tenancy: non-admin users can only access client-owned assets in their scope.
       return this.prisma.asset.findMany({
         where: {
@@ -42,7 +43,7 @@ export class AssetsService {
 
     // Enforce that non-admin cannot create assets for other clients.
     if (
-      requesterRole !== Role.ADMIN &&
+      !isOrgSuperRole(requesterRole) &&
       dto.ownerType === OwnerType.CLIENT &&
       dto.clientId !== requesterClientId
     ) {
@@ -50,7 +51,7 @@ export class AssetsService {
     }
 
     // Restrict internal-asset creation to admins.
-    if (dto.ownerType === OwnerType.INTERNAL && requesterRole !== Role.ADMIN) {
+    if (dto.ownerType === OwnerType.INTERNAL && !isOrgSuperRole(requesterRole)) {
       throw new ForbiddenException("Only admins can create INTERNAL assets.");
     }
 

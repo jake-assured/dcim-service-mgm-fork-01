@@ -21,7 +21,7 @@ import {
 } from "@mui/material";
 import { priorityChipSx, statusChipSx } from "../lib/ui";
 import { EmptyState, ErrorState, LoadingState } from "../components/PageState";
-import { hasAnyRole, ROLES } from "../lib/rbac";
+import { hasAnyRole, ORG_SUPER_ROLES, ROLES } from "../lib/rbac";
 
 type IncidentOption = { id: string; reference: string; title: string };
 
@@ -38,7 +38,7 @@ type Task = {
 const statusOptions = ["OPEN", "IN_PROGRESS", "BLOCKED", "DONE"];
 
 export default function TasksPage() {
-  const canManage = hasAnyRole([ROLES.ADMIN, ROLES.SERVICE_MANAGER, ROLES.SERVICE_DESK_ANALYST, ROLES.ENGINEER]);
+  const canManage = hasAnyRole([...ORG_SUPER_ROLES, ROLES.SERVICE_MANAGER, ROLES.SERVICE_DESK_ANALYST, ROLES.ENGINEER]);
   const qc = useQueryClient();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");

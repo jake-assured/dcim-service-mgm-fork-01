@@ -19,7 +19,7 @@ export class SurveysController {
 
   @Get()
   @Roles(
-    Role.ADMIN,
+    Role.ORG_OWNER, Role.ORG_ADMIN, Role.ADMIN,
     Role.SERVICE_MANAGER,
     Role.SERVICE_DESK_ANALYST,
     Role.ENGINEER,
@@ -33,7 +33,7 @@ export class SurveysController {
 
   @Get(":id")
   @Roles(
-    Role.ADMIN,
+    Role.ORG_OWNER, Role.ORG_ADMIN, Role.ADMIN,
     Role.SERVICE_MANAGER,
     Role.SERVICE_DESK_ANALYST,
     Role.ENGINEER,
@@ -46,7 +46,7 @@ export class SurveysController {
   }
 
   @Post()
-  @Roles(Role.ADMIN, Role.SERVICE_MANAGER, Role.SERVICE_DESK_ANALYST)
+  @Roles(Role.ORG_OWNER, Role.ORG_ADMIN, Role.ADMIN, Role.SERVICE_MANAGER, Role.SERVICE_DESK_ANALYST)
   async create(
     @Req() req: any,
     @Body() dto: CreateSurveyDto,
@@ -58,7 +58,7 @@ export class SurveysController {
   }
 
   @Post(":id/start")
-  @Roles(Role.ADMIN, Role.SERVICE_MANAGER, Role.SERVICE_DESK_ANALYST, Role.ENGINEER)
+  @Roles(Role.ORG_OWNER, Role.ORG_ADMIN, Role.ADMIN, Role.SERVICE_MANAGER, Role.SERVICE_DESK_ANALYST, Role.ENGINEER)
   async start(@Req() req: any, @Param("id") id: string, @Headers("x-client-id") requestedClientId?: string) {
     const user = getJwtUser(req);
     const clientId = await resolveClientScope(user, requestedClientId, this.prisma);
@@ -66,7 +66,7 @@ export class SurveysController {
   }
 
   @Post(":id/items")
-  @Roles(Role.ADMIN, Role.SERVICE_MANAGER, Role.SERVICE_DESK_ANALYST, Role.ENGINEER)
+  @Roles(Role.ORG_OWNER, Role.ORG_ADMIN, Role.ADMIN, Role.SERVICE_MANAGER, Role.SERVICE_DESK_ANALYST, Role.ENGINEER)
   async addItem(
     @Req() req: any,
     @Param("id") id: string,
@@ -79,7 +79,7 @@ export class SurveysController {
   }
 
   @Post(":id/items/:itemId")
-  @Roles(Role.ADMIN, Role.SERVICE_MANAGER, Role.SERVICE_DESK_ANALYST, Role.ENGINEER)
+  @Roles(Role.ORG_OWNER, Role.ORG_ADMIN, Role.ADMIN, Role.SERVICE_MANAGER, Role.SERVICE_DESK_ANALYST, Role.ENGINEER)
   async updateItem(
     @Req() req: any,
     @Param("id") id: string,
@@ -93,7 +93,7 @@ export class SurveysController {
   }
 
   @Post(":id/complete")
-  @Roles(Role.ADMIN, Role.SERVICE_MANAGER, Role.SERVICE_DESK_ANALYST, Role.ENGINEER)
+  @Roles(Role.ORG_OWNER, Role.ORG_ADMIN, Role.ADMIN, Role.SERVICE_MANAGER, Role.SERVICE_DESK_ANALYST, Role.ENGINEER)
   async complete(@Req() req: any, @Param("id") id: string, @Headers("x-client-id") requestedClientId?: string) {
     const user = getJwtUser(req);
     const clientId = await resolveClientScope(user, requestedClientId, this.prisma);

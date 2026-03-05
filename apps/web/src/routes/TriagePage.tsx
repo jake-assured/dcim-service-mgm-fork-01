@@ -18,7 +18,7 @@ import {
 } from "@mui/material";
 import { statusChipSx } from "../lib/ui";
 import { EmptyState, ErrorState, LoadingState } from "../components/PageState";
-import { hasAnyRole, ROLES } from "../lib/rbac";
+import { hasAnyRole, ORG_SUPER_ROLES, ROLES } from "../lib/rbac";
 
 type Submission = {
   id: string;
@@ -31,7 +31,7 @@ type Submission = {
 };
 
 export default function TriagePage() {
-  const canManage = hasAnyRole([ROLES.ADMIN, ROLES.SERVICE_MANAGER, ROLES.SERVICE_DESK_ANALYST]);
+  const canManage = hasAnyRole([...ORG_SUPER_ROLES, ROLES.SERVICE_MANAGER, ROLES.SERVICE_DESK_ANALYST]);
   const qc = useQueryClient();
 
   const { data, isLoading, error } = useQuery({

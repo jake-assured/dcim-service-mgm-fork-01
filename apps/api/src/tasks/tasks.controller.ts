@@ -18,7 +18,7 @@ export class TasksController {
 
   @Get()
   @Roles(
-    Role.ADMIN,
+    Role.ORG_OWNER, Role.ORG_ADMIN, Role.ADMIN,
     Role.SERVICE_MANAGER,
     Role.SERVICE_DESK_ANALYST,
     Role.ENGINEER,
@@ -32,7 +32,7 @@ export class TasksController {
 
   @Get(":id")
   @Roles(
-    Role.ADMIN,
+    Role.ORG_OWNER, Role.ORG_ADMIN, Role.ADMIN,
     Role.SERVICE_MANAGER,
     Role.SERVICE_DESK_ANALYST,
     Role.ENGINEER,
@@ -45,7 +45,7 @@ export class TasksController {
   }
 
   @Post()
-  @Roles(Role.ADMIN, Role.SERVICE_MANAGER, Role.SERVICE_DESK_ANALYST, Role.ENGINEER)
+  @Roles(Role.ORG_OWNER, Role.ORG_ADMIN, Role.ADMIN, Role.SERVICE_MANAGER, Role.SERVICE_DESK_ANALYST, Role.ENGINEER)
   async create(@Req() req: any, @Body() dto: CreateTaskDto, @Headers("x-client-id") requestedClientId?: string) {
     const user = getJwtUser(req);
     const clientId = await resolveClientScope(user, requestedClientId, this.prisma);
@@ -53,7 +53,7 @@ export class TasksController {
   }
 
   @Post(":id/status")
-  @Roles(Role.ADMIN, Role.SERVICE_MANAGER, Role.SERVICE_DESK_ANALYST, Role.ENGINEER)
+  @Roles(Role.ORG_OWNER, Role.ORG_ADMIN, Role.ADMIN, Role.SERVICE_MANAGER, Role.SERVICE_DESK_ANALYST, Role.ENGINEER)
   async updateStatus(
     @Req() req: any,
     @Param("id") id: string,

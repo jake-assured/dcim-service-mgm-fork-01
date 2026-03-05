@@ -21,7 +21,7 @@ import {
   Typography
 } from "@mui/material";
 import { statusChipSx } from "../lib/ui";
-import { hasAnyRole, ROLES } from "../lib/rbac";
+import { hasAnyRole, ORG_SUPER_ROLES, ROLES } from "../lib/rbac";
 import { ErrorState, LoadingState } from "../components/PageState";
 
 type SurveyItem = {
@@ -40,7 +40,7 @@ type Survey = {
 };
 
 export default function SurveyDetailPage() {
-  const canManage = hasAnyRole([ROLES.ADMIN, ROLES.SERVICE_MANAGER, ROLES.SERVICE_DESK_ANALYST, ROLES.ENGINEER]);
+  const canManage = hasAnyRole([...ORG_SUPER_ROLES, ROLES.SERVICE_MANAGER, ROLES.SERVICE_DESK_ANALYST, ROLES.ENGINEER]);
   const { id } = useParams();
   const qc = useQueryClient();
   const [newLabel, setNewLabel] = useState("");
