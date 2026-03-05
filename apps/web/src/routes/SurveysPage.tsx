@@ -1,7 +1,20 @@
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../lib/api";
-import { Box, Card, CardContent, Chip, Table, TableBody, TableCell, TableHead, TableRow, Typography } from "@mui/material";
+import {
+  Box,
+  Button,
+  Card,
+  CardContent,
+  Chip,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
+  Typography
+} from "@mui/material";
+import { useNavigate } from "react-router-dom";
 
 type Survey = {
   id: string;
@@ -13,6 +26,7 @@ type Survey = {
 };
 
 export default function SurveysPage() {
+  const nav = useNavigate();
   const { data, isLoading, error } = useQuery({
     queryKey: ["surveys"],
     queryFn: async () => (await api.get<Survey[]>("/surveys")).data
@@ -36,6 +50,7 @@ export default function SurveysPage() {
                 <TableCell>Status</TableCell>
                 <TableCell>Scheduled</TableCell>
                 <TableCell>Items</TableCell>
+                <TableCell align="right">Action</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -46,6 +61,11 @@ export default function SurveysPage() {
                   <TableCell><Chip size="small" label={s.status.toLowerCase().replaceAll("_"," ")} /></TableCell>
                   <TableCell>{s.scheduledAt ? new Date(s.scheduledAt).toLocaleDateString() : "-"}</TableCell>
                   <TableCell>{s.items?.length ?? 0}</TableCell>
+                  <TableCell align="right">
+                    <Button size="small" variant="outlined" onClick={() => nav(`/surveys/${s.id}`)}>
+                      Open
+                    </Button>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>

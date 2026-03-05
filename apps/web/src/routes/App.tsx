@@ -9,6 +9,7 @@ import TriagePage from "./TriagePage";
 import ServiceRequestsPage from "./ServiceRequestsPage";
 import AssetsPage from "./AssetsPage";
 import SurveysPage from "./SurveysPage";
+import SurveyDetailPage from "./SurveyDetailPage";
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const token = getToken();
@@ -35,6 +36,7 @@ export default function App() {
         <Route path="service-requests" element={<ServiceRequestsPage />} />
         <Route path="assets" element={<AssetsPage />} />
         <Route path="surveys" element={<SurveysPage />} />
+        <Route path="surveys/:id" element={<SurveyDetailPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
