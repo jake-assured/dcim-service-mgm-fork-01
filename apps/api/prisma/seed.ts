@@ -11,11 +11,15 @@ function makeRef(prefix: string) {
 }
 
 async function main() {
-  const clientA = await prisma.client.upsert({
-    where: { name: "Nova Logistics" },
-    update: {},
-    create: { name: "Nova Logistics", status: "ACTIVE" }
+  const existingClient = await prisma.client.findFirst({
+    where: { name: "Nova Logistics" }
   });
+  
+  const clientA =
+    existingClient ??
+    (await prisma.client.create({
+      data: { name: "Nova Logistics", status: "ACTIVE" }
+    }));
 
   const adminEmail = "admin@dcm.local";
   const admin = await prisma.user.upsert({
