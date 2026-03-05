@@ -5,6 +5,7 @@ import { ValidationPipe } from "@nestjs/common";
 import { SwaggerModule, DocumentBuilder } from "@nestjs/swagger";
 import * as cookieParser from "cookie-parser";
 import { Request, Response, NextFunction } from "express";
+import { HttpExceptionFilter } from "./common/filters/http-exception.filter";
 
 async function bootstrap() {
   const corsOrigins =
@@ -19,6 +20,8 @@ async function bootstrap() {
       credentials: true
     }
   });
+
+  app.useGlobalFilters(new HttpExceptionFilter());
 
   // Optional request logging
   if (process.env.LOG_REQUESTS === "true") {
