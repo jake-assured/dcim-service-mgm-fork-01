@@ -1,0 +1,173 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  SERVICE_MANAGER
+  SERVICE_DESK_ANALYST
+  ENGINEER
+  CLIENT_VIEWER
+  PUBLIC_USER
+}
+
+enum OwnerType {
+  INTERNAL
+  CLIENT
+}
+
+enum ServiceRequestStatus {
+  NEW
+  ASSIGNED
+  IN_PROGRESS
+  WAITING_CUSTOMER
+  COMPLETED
+  CLOSED
+  CANCELLED
+}
+
+enum SurveyStatus {
+  DRAFT
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum SurveyItemResponse {
+  PASS
+  FAIL
+  NA
+}
+
+model Client {
+  id        String   @id @default(uuid())
+  name      String
+  status    String   @default("ACTIVE")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users     User[]
+  serviceRequests ServiceRequest[]
+  assets    Asset[]
+  surveys   Survey[]
+  publicSubmissions PublicSubmission[]
+  documents DocumentReference[]
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  role         Role
+  clientId     String?
+  client       Client?  @relation(fields: [clientId], references: [id])
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  assignedServiceRequests ServiceRequest[] @relation("AssignedSR")
+}
+
+model PublicSubmission {
+  id          String   @id @default(uuid())
+  clientId    String?
+  client      Client?  @relation(fields: [clientId], references: [id])
+  requesterName  String
+  requesterEmail String
+  subject     String
+  description String
+  status      String   @default("NEW") // NEW / CONVERTED / REJECTED
+  convertedServiceRequestId String?
+  createdAt   DateTime @default(now())
+}
+
+model ServiceRequest {
+  id          String   @id @default(uuid())
+  reference   String   @unique
+  clientId    String
+  client      Client   @relation(fields: [clientId], references: [id])
+  subject     String
+  description String
+  status      ServiceRequestStatus @default(NEW)
+  priority    String   @default("medium")
+  closureSummary String?
+  assigneeId  String?
+  assignee    User?    @relation("AssignedSR", fields: [assigneeId], references: [id])
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  auditEvents AuditEvent[]
+}
+
+model Asset {
+  id          String   @id @default(uuid())
+  assetTag    String   @unique
+  name        String
+  assetType   String
+  ownerType   OwnerType
+  clientId    String?
+  client      Client?  @relation(fields: [clientId], references: [id])
+  location    String?
+  status      String   @default("ACTIVE")
+  lastMaintenanceAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Survey {
+  id          String   @id @default(uuid())
+  clientId    String
+  client      Client   @relation(fields: [clientId], references: [id])
+  title       String
+  surveyType  String
+  status      SurveyStatus @default(DRAFT)
+  scheduledAt DateTime?
+  assigneeId  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  items       SurveyItem[]
+}
+
+model SurveyItem {
+  id          String   @id @default(uuid())
+  surveyId    String
+  survey      Survey   @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  label       String
+  response    SurveyItemResponse?
+  notes       String?
+  photoObjectKey String?
+  updatedAt   DateTime @updatedAt
+}
+
+model DocumentReference {
+  id          String   @id @default(uuid())
+  clientId    String
+  client      Client   @relation(fields: [clientId], references: [id])
+  title       String
+  url         String
+  docType     String?
+  version     String?
+  linkedEntityType String?
+  linkedEntityId   String?
+  createdAt   DateTime @default(now())
+}
+
+model AuditEvent {
+  id          String   @id @default(uuid())
+  entityType  String
+  entityId    String
+  action      String
+  actorUserId String?
+  clientId    String?
+  data        Json?
+  createdAt   DateTime @default(now())
+
+  serviceRequestId String?
+  serviceRequest   ServiceRequest? @relation(fields: [serviceRequestId], references: [id])
+}
