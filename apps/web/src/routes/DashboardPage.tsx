@@ -4,16 +4,24 @@ import { api } from "../lib/api";
 import {
   Box,
   Button,
+  ButtonGroup,
   Card,
   CardContent,
+  Chip,
   Grid,
+  LinearProgress,
   MenuItem,
   Stack,
   TextField,
+  Tooltip,
   Typography
 } from "@mui/material";
+import { alpha } from "@mui/material/styles";
 import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 import FileDownloadIcon from "@mui/icons-material/FileDownload";
+import InsightsIcon from "@mui/icons-material/Insights";
+import FilterAltIcon from "@mui/icons-material/FilterAlt";
+import { ErrorState, LoadingState } from "../components/PageState";
 
 type Assignee = { id: string; email: string };
 
@@ -59,6 +67,11 @@ function formatDateForInput(date: Date) {
   return date.toISOString().slice(0, 10);
 }
 
+function formatDateForLabel(value: string) {
+  const d = new Date(`${value}T00:00:00.000Z`);
+  return Number.isNaN(d.getTime()) ? value : d.toLocaleDateString();
+}
+
 function inDateRange(value: string, dateFrom: string, dateTo: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return false;
@@ -84,12 +97,24 @@ function countOpenedResolved<T extends { status: string; createdAt: string; upda
   return { opened, resolved };
 }
 
+function getDateRangeFromPreset(preset: "7d" | "30d" | "90d" | "ytd") {
+  const now = new Date();
+  const to = formatDateForInput(now);
+  if (preset === "ytd") {
+    return { from: `${now.getUTCFullYear()}-01-01`, to };
+  }
+
+  const days = preset === "7d" ? 7 : preset === "30d" ? 30 : 90;
+  const fromDate = new Date(now.getTime() - 1000 * 60 * 60 * 24 * days);
+  return { from: formatDateForInput(fromDate), to };
+}
+
 export default function DashboardPage() {
-  const [dateFrom, setDateFrom] = React.useState(
-    formatDateForInput(new Date(Date.now() - 1000 * 60 * 60 * 24 * 30))
-  );
-  const [dateTo, setDateTo] = React.useState(formatDateForInput(new Date()));
+  const defaultRange = getDateRangeFromPreset("30d");
+  const [dateFrom, setDateFrom] = React.useState(defaultRange.from);
+  const [dateTo, setDateTo] = React.useState(defaultRange.to);
   const [assigneeId, setAssigneeId] = React.useState("");
+  const [activePreset, setActivePreset] = React.useState<"7d" | "30d" | "90d" | "ytd">("30d");
   const [isExporting, setIsExporting] = React.useState<string | null>(null);
 
   const srs = useQuery({
@@ -117,6 +142,15 @@ export default function DashboardPage() {
     queryFn: async () => (await api.get<TriageItem[]>("/triage/queue")).data
   });
 
+  const isLoading =
+    srs.isLoading ||
+    incidents.isLoading ||
+    tasks.isLoading ||
+    assets.isLoading ||
+    surveys.isLoading ||
+    triage.isLoading;
+  const hasError = srs.error || incidents.error || tasks.error || assets.error || surveys.error || triage.error;
+
   const assignees = React.useMemo(() => {
     const byId = new Map<string, Assignee>();
     [...(srs.data ?? []), ...(incidents.data ?? []), ...(tasks.data ?? [])].forEach((item) => {
@@ -124,6 +158,11 @@ export default function DashboardPage() {
     });
     return Array.from(byId.values()).sort((a, b) => a.email.localeCompare(b.email));
   }, [srs.data, incidents.data, tasks.data]);
+
+  const selectedAssigneeLabel = React.useMemo(() => {
+    if (!assigneeId) return "All assignees";
+    return assignees.find((x) => x.id === assigneeId)?.email ?? "Unknown assignee";
+  }, [assigneeId, assignees]);
 
   const applyAssignee = <T extends { assigneeId?: string | null }>(items: T[]) =>
     assigneeId ? items.filter((x) => x.assigneeId === assigneeId) : items;
@@ -155,13 +194,28 @@ export default function DashboardPage() {
   ];
 
   const cards = [
-    { label: "Triage Inbox", value: triageInbox, tone: "#f59e0b" },
-    { label: "Open Service Requests", value: openTickets, tone: "#2563eb" },
-    { label: "Open Incidents", value: openIncidents, tone: "#dc2626" },
-    { label: "Open Tasks", value: openTasks, tone: "#0f766e" },
-    { label: "Assets", value: assets.data?.length ?? 0, tone: "#0f766e" },
-    { label: "Active Surveys", value: activeSurveys, tone: "#7c3aed" }
+    { label: "Triage Inbox", value: triageInbox, tone: "#f59e0b", description: "Items waiting for triage." },
+    { label: "Open Service Requests", value: openTickets, tone: "#2563eb", description: "Not closed in period." },
+    { label: "Open Incidents", value: openIncidents, tone: "#dc2626", description: "Active incident workload." },
+    { label: "Open Tasks", value: openTasks, tone: "#0f766e", description: "Tasks still in progress." },
+    { label: "Assets", value: assets.data?.length ?? 0, tone: "#0891b2", description: "Assets in current scope." },
+    { label: "Active Surveys", value: activeSurveys, tone: "#7c3aed", description: "Surveys not completed." }
   ];
+
+  function applyPreset(preset: "7d" | "30d" | "90d" | "ytd") {
+    const range = getDateRangeFromPreset(preset);
+    setDateFrom(range.from);
+    setDateTo(range.to);
+    setActivePreset(preset);
+  }
+
+  function resetFilters() {
+    const range = getDateRangeFromPreset("30d");
+    setDateFrom(range.from);
+    setDateTo(range.to);
+    setAssigneeId("");
+    setActivePreset("30d");
+  }
 
   async function exportCsv(kind: "service-requests" | "incidents" | "tasks") {
     try {
@@ -192,6 +246,7 @@ export default function DashboardPage() {
       <Stack
         direction={{ xs: "column", lg: "row" }}
         justifyContent="space-between"
+        alignItems={{ xs: "flex-start", lg: "center" }}
         sx={{ mb: 1.5 }}
         spacing={1.5}
       >
@@ -200,10 +255,10 @@ export default function DashboardPage() {
             Dashboard
           </Typography>
           <Typography variant="body1" color="text.secondary">
-            Operational reporting with scoped filters, trend tracking, and exportable reports.
+            Operational pulse with fast filters, trend visibility, and one-click report exports.
           </Typography>
         </Box>
-        <Stack direction="row" spacing={1}>
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
           <Button
             variant="outlined"
             size="small"
@@ -234,93 +289,221 @@ export default function DashboardPage() {
         </Stack>
       </Stack>
 
-      <Card sx={{ mb: 2 }}>
+      <Card
+        sx={{
+          mb: 2,
+          border: "1px solid #dbe4f1",
+          background:
+            "linear-gradient(130deg, rgba(255,255,255,1) 0%, rgba(248,250,252,0.96) 70%, rgba(239,246,255,0.9) 100%)"
+        }}
+      >
         <CardContent>
-          <Stack direction={{ xs: "column", md: "row" }} spacing={1.2}>
-            <TextField
-              type="date"
-              label="From"
-              InputLabelProps={{ shrink: true }}
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
+          <Stack direction={{ xs: "column", lg: "row" }} spacing={1.5} justifyContent="space-between">
+            <Stack direction={{ xs: "column", md: "row" }} spacing={1.2}>
+              <TextField
+                type="date"
+                label="From"
+                InputLabelProps={{ shrink: true }}
+                value={dateFrom}
+                onChange={(e) => {
+                  setDateFrom(e.target.value);
+                  setActivePreset("30d");
+                }}
+              />
+              <TextField
+                type="date"
+                label="To"
+                InputLabelProps={{ shrink: true }}
+                value={dateTo}
+                onChange={(e) => {
+                  setDateTo(e.target.value);
+                  setActivePreset("30d");
+                }}
+              />
+              <TextField
+                select
+                label="Assignee"
+                value={assigneeId}
+                onChange={(e) => setAssigneeId(e.target.value)}
+                sx={{ minWidth: 260 }}
+              >
+                <MenuItem value="">All assignees</MenuItem>
+                {assignees.map((assignee) => (
+                  <MenuItem key={assignee.id} value={assignee.id}>
+                    {assignee.email}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Stack>
+
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
+              <ButtonGroup variant="outlined" size="small" aria-label="Quick date presets">
+                <Button
+                  variant={activePreset === "7d" ? "contained" : "outlined"}
+                  onClick={() => applyPreset("7d")}
+                >
+                  7D
+                </Button>
+                <Button
+                  variant={activePreset === "30d" ? "contained" : "outlined"}
+                  onClick={() => applyPreset("30d")}
+                >
+                  30D
+                </Button>
+                <Button
+                  variant={activePreset === "90d" ? "contained" : "outlined"}
+                  onClick={() => applyPreset("90d")}
+                >
+                  90D
+                </Button>
+                <Button
+                  variant={activePreset === "ytd" ? "contained" : "outlined"}
+                  onClick={() => applyPreset("ytd")}
+                >
+                  YTD
+                </Button>
+              </ButtonGroup>
+              <Button variant="text" size="small" onClick={resetFilters}>
+                Reset
+              </Button>
+            </Stack>
+          </Stack>
+
+          <Stack direction={{ xs: "column", md: "row" }} spacing={1} sx={{ mt: 1.5 }}>
+            <Chip
+              icon={<FilterAltIcon />}
+              label={`Period: ${formatDateForLabel(dateFrom)} to ${formatDateForLabel(dateTo)}`}
+              size="small"
+              sx={{ bgcolor: "#eef2ff", border: "1px solid #c7d2fe" }}
             />
-            <TextField
-              type="date"
-              label="To"
-              InputLabelProps={{ shrink: true }}
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
+            <Chip
+              label={`Assignee: ${selectedAssigneeLabel}`}
+              size="small"
+              sx={{ bgcolor: "#f1f5f9", border: "1px solid #cbd5e1" }}
             />
-            <TextField
-              select
-              label="Assignee"
-              value={assigneeId}
-              onChange={(e) => setAssigneeId(e.target.value)}
-              sx={{ minWidth: 260 }}
-            >
-              <MenuItem value="">All assignees</MenuItem>
-              {assignees.map((assignee) => (
-                <MenuItem key={assignee.id} value={assignee.id}>
-                  {assignee.email}
-                </MenuItem>
-              ))}
-            </TextField>
           </Stack>
         </CardContent>
       </Card>
 
-      <Grid container spacing={2} sx={{ mb: 2 }}>
-        {trendCards.map((metric) => (
-          <Grid item xs={12} md={4} key={metric.label}>
-            <Card sx={{ borderLeft: `4px solid ${metric.tone}` }}>
-              <CardContent>
-                <Typography variant="subtitle2" color="text.secondary">
-                  {metric.label} Trend
-                </Typography>
-                <Stack direction="row" spacing={3} sx={{ mt: 1 }}>
-                  <Box>
-                    <Typography variant="caption" color="text.secondary">
-                      Opened
-                    </Typography>
-                    <Typography variant="h5" sx={{ fontWeight: 800 }}>
-                      {metric.opened}
-                    </Typography>
-                  </Box>
-                  <Box>
-                    <Typography variant="caption" color="text.secondary">
-                      Resolved
-                    </Typography>
-                    <Typography variant="h5" sx={{ fontWeight: 800 }}>
-                      {metric.resolved}
-                    </Typography>
-                  </Box>
-                </Stack>
-              </CardContent>
-            </Card>
-          </Grid>
-        ))}
-      </Grid>
+      {isLoading ? <LoadingState label="Refreshing dashboard metrics..." /> : null}
+      {hasError ? <ErrorState title="Failed to load dashboard metrics" /> : null}
 
-      <Grid container spacing={2}>
-        {cards.map((c) => (
-          <Grid item xs={12} sm={6} md={4} lg={2.4 as any} key={c.label}>
-            <Card sx={{ overflow: "hidden" }}>
-              <Box sx={{ height: 4, bgcolor: c.tone }} />
-              <CardContent>
-                <Stack direction="row" justifyContent="space-between" alignItems="center">
-                  <Typography variant="subtitle2" sx={{ opacity: 0.8 }}>
-                    {c.label}
-                  </Typography>
-                  <TrendingUpIcon sx={{ color: c.tone, fontSize: 18 }} />
-                </Stack>
-                <Typography variant="h4" sx={{ mt: 1.2, fontWeight: 800 }}>
-                  {c.value}
-                </Typography>
-              </CardContent>
-            </Card>
+      {!isLoading && !hasError ? (
+        <>
+          <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
+            <InsightsIcon sx={{ color: "#334155", fontSize: 20 }} />
+            <Typography variant="subtitle1" sx={{ fontWeight: 700, color: "#1e293b" }}>
+              Trend Snapshot
+            </Typography>
+            <Tooltip title="Opened is counted by created date. Resolved is counted by latest status date within the selected period.">
+              <Chip label="How this works" size="small" variant="outlined" />
+            </Tooltip>
+          </Stack>
+
+          <Grid container spacing={2} sx={{ mb: 2 }}>
+            {trendCards.map((metric, idx) => {
+              const total = metric.opened + metric.resolved;
+              const resolvedPct = total > 0 ? Math.round((metric.resolved / total) * 100) : 0;
+
+              return (
+                <Grid item xs={12} md={4} key={metric.label}>
+                  <Card
+                    sx={{
+                      border: `1px solid ${alpha(metric.tone, 0.22)}`,
+                      background: `linear-gradient(135deg, ${alpha(metric.tone, 0.07)} 0%, #ffffff 55%)`,
+                      animation: "fadeUp 420ms ease both",
+                      animationDelay: `${idx * 70}ms`,
+                      "@keyframes fadeUp": {
+                        from: { opacity: 0, transform: "translateY(10px)" },
+                        to: { opacity: 1, transform: "translateY(0)" }
+                      }
+                    }}
+                  >
+                    <CardContent>
+                      <Typography variant="subtitle2" color="text.secondary">
+                        {metric.label}
+                      </Typography>
+                      <Stack direction="row" spacing={3} sx={{ mt: 1 }}>
+                        <Box>
+                          <Typography variant="caption" color="text.secondary">
+                            Opened
+                          </Typography>
+                          <Typography variant="h5" sx={{ fontWeight: 800 }}>
+                            {metric.opened}
+                          </Typography>
+                        </Box>
+                        <Box>
+                          <Typography variant="caption" color="text.secondary">
+                            Resolved
+                          </Typography>
+                          <Typography variant="h5" sx={{ fontWeight: 800 }}>
+                            {metric.resolved}
+                          </Typography>
+                        </Box>
+                      </Stack>
+                      <Box sx={{ mt: 1.2 }}>
+                        <LinearProgress
+                          variant="determinate"
+                          value={resolvedPct}
+                          sx={{
+                            height: 8,
+                            borderRadius: 99,
+                            bgcolor: "#e2e8f0",
+                            "& .MuiLinearProgress-bar": { bgcolor: metric.tone }
+                          }}
+                        />
+                        <Typography variant="caption" color="text.secondary">
+                          Resolution share: {resolvedPct}%
+                        </Typography>
+                      </Box>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              );
+            })}
           </Grid>
-        ))}
-      </Grid>
+
+          <Typography variant="subtitle1" sx={{ fontWeight: 700, color: "#1e293b", mb: 1 }}>
+            Current Snapshot
+          </Typography>
+          <Grid container spacing={2}>
+            {cards.map((card, idx) => (
+              <Grid item xs={12} sm={6} md={4} lg={2.4 as any} key={card.label}>
+                <Card
+                  sx={{
+                    overflow: "hidden",
+                    border: `1px solid ${alpha(card.tone, 0.2)}`,
+                    background: `radial-gradient(circle at top right, ${alpha(card.tone, 0.18)} 0%, #ffffff 55%)`,
+                    transition: "transform 180ms ease, box-shadow 180ms ease",
+                    animation: "fadeUp 420ms ease both",
+                    animationDelay: `${idx * 60}ms`,
+                    "&:hover": {
+                      transform: "translateY(-2px)",
+                      boxShadow: "0 10px 24px rgba(15,23,42,0.09)"
+                    }
+                  }}
+                >
+                  <Box sx={{ height: 4, bgcolor: card.tone }} />
+                  <CardContent>
+                    <Stack direction="row" justifyContent="space-between" alignItems="center">
+                      <Typography variant="subtitle2" sx={{ color: "#334155" }}>
+                        {card.label}
+                      </Typography>
+                      <TrendingUpIcon sx={{ color: card.tone, fontSize: 18 }} />
+                    </Stack>
+                    <Typography variant="h4" sx={{ mt: 1.2, fontWeight: 800 }}>
+                      {card.value}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {card.description}
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+        </>
+      ) : null}
     </Box>
   );
 }
