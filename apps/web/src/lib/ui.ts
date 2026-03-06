@@ -10,7 +10,7 @@ export function statusChipSx(status: string) {
   if (s.includes("NEW") || s.includes("DRAFT")) {
     return { bgcolor: "#fff5e8", color: "#b45309", fontWeight: 700 };
   }
-  if (s.includes("FAIL") || s.includes("CANCELLED")) {
+  if (s.includes("FAIL") || s.includes("CANCELLED") || s.includes("REJECTED")) {
     return { bgcolor: "#fdecec", color: "#b42318", fontWeight: 700 };
   }
   return { bgcolor: "#eef2f7", color: "#334155", fontWeight: 700 };

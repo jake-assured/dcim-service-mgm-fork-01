@@ -1,7 +1,12 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { IncidentSeverity, Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
-import { ConvertTriageItemDto, TriageConvertTargetType, TriageSourceType } from "./dto";
+import {
+  ConvertTriageItemDto,
+  TriageConvertTargetType,
+  TriageLifecycleStatus,
+  TriageSourceType
+} from "./dto";
 
 function makeServiceRequestRef() {
   const y = new Date().getFullYear();
@@ -40,6 +45,7 @@ export class TriageService {
         title: item.title,
         description: item.description,
         status: item.status,
+        triageNotes: item.triageNotes,
         createdAt: item.createdAt,
         convertedEntityType: item.convertedEntityType,
         convertedEntityId: item.convertedEntityId
@@ -52,6 +58,7 @@ export class TriageService {
         title: item.subject,
         description: item.description,
         status: item.status,
+        triageNotes: item.triageNotes,
         createdAt: item.createdAt,
         convertedEntityType: item.convertedEntityType,
         convertedEntityId: item.convertedEntityId ?? item.convertedServiceRequestId
@@ -119,6 +126,64 @@ export class TriageService {
         sourceId: source.id,
         targetType: target.entityType,
         targetId: target.entityId
+      };
+    });
+  }
+
+  async updateStatus(
+    clientId: string,
+    sourceType: TriageSourceType,
+    sourceId: string,
+    actorUserId: string,
+    status: TriageLifecycleStatus,
+    triageNotes?: string
+  ) {
+    if (status === TriageLifecycleStatus.REJECTED && !triageNotes?.trim()) {
+      throw new BadRequestException("triageNotes are required when rejecting a triage item.");
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      const source = await this.loadSourceForClient(tx, clientId, sourceType, sourceId);
+      if (source.status === "CONVERTED" || source.status === "REJECTED") {
+        throw new BadRequestException("Triage item is already finalized.");
+      }
+
+      if (sourceType === TriageSourceType.REQUEST_INTAKE) {
+        await tx.requestIntake.update({
+          where: { id: sourceId },
+          data: {
+            status,
+            triageNotes: triageNotes?.trim() || null
+          }
+        });
+      } else {
+        await tx.publicSubmission.update({
+          where: { id: sourceId },
+          data: {
+            status,
+            triageNotes: triageNotes?.trim() || null
+          }
+        });
+      }
+
+      await tx.auditEvent.create({
+        data: {
+          entityType: sourceType,
+          entityId: sourceId,
+          action: "TRIAGE_STATUS_UPDATED",
+          actorUserId,
+          clientId,
+          data: {
+            status,
+            triageNotes: triageNotes?.trim() || null
+          }
+        }
+      });
+
+      return {
+        sourceType,
+        sourceId,
+        status
       };
     });
   }

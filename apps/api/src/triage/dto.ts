@@ -12,6 +12,11 @@ export enum TriageConvertTargetType {
   TASK = "TASK"
 }
 
+export enum TriageLifecycleStatus {
+  UNDER_REVIEW = "UNDER_REVIEW",
+  REJECTED = "REJECTED"
+}
+
 export class ConvertTriageItemDto {
   @IsEnum(TriageConvertTargetType)
   targetType!: TriageConvertTargetType;
@@ -43,3 +48,12 @@ export class ConvertTriageItemDto {
   triageNotes?: string;
 }
 
+export class UpdateTriageItemStatusDto {
+  @IsEnum(TriageLifecycleStatus)
+  status!: TriageLifecycleStatus;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(5)
+  triageNotes?: string;
+}
