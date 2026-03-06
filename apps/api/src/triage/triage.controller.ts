@@ -6,7 +6,7 @@ import { getJwtUser, resolveClientScope } from "../auth/request-context";
 import { Roles } from "../auth/roles.decorator";
 import { RolesGuard } from "../auth/roles.guard";
 import { PrismaService } from "../prisma/prisma.service";
-import { ConvertTriageItemDto, TriageSourceType } from "./dto";
+import { ConvertTriageItemDto, TriageSourceType, UpdateTriageItemStatusDto } from "./dto";
 import { TriageService } from "./triage.service";
 
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -40,5 +40,18 @@ export class TriageController {
     const clientId = await resolveClientScope(user, requestedClientId, this.prisma);
     return this.triage.convert(clientId, sourceType, id, user.userId, dto);
   }
-}
 
+  @Post(":sourceType/:id/status")
+  @Roles(Role.ORG_OWNER, Role.ORG_ADMIN, Role.ADMIN, Role.SERVICE_MANAGER, Role.SERVICE_DESK_ANALYST)
+  async updateStatus(
+    @Req() req: any,
+    @Param("sourceType") sourceType: TriageSourceType,
+    @Param("id") id: string,
+    @Body() dto: UpdateTriageItemStatusDto,
+    @Headers("x-client-id") requestedClientId?: string
+  ) {
+    const user = getJwtUser(req);
+    const clientId = await resolveClientScope(user, requestedClientId, this.prisma);
+    return this.triage.updateStatus(clientId, sourceType, id, user.userId, dto.status, dto.triageNotes);
+  }
+}

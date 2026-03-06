@@ -135,6 +135,7 @@ model PublicSubmission {
   subject     String
   description String
   status      String   @default("NEW") // NEW / CONVERTED / REJECTED
+  triageNotes String?
   convertedServiceRequestId String?
   convertedEntityType String?
   convertedEntityId   String?

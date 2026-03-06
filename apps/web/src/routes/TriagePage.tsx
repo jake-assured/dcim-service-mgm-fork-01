@@ -35,6 +35,7 @@ type TriageItem = {
   title: string;
   description: string;
   status: string;
+  triageNotes?: string | null;
   createdAt: string;
   convertedEntityType?: string | null;
   convertedEntityId?: string | null;
@@ -50,6 +51,9 @@ export default function TriagePage() {
   const [taskDueAt, setTaskDueAt] = React.useState("");
   const [title, setTitle] = React.useState("");
   const [description, setDescription] = React.useState("");
+  const [statusTarget, setStatusTarget] = React.useState<"UNDER_REVIEW" | "REJECTED">("UNDER_REVIEW");
+  const [statusNotes, setStatusNotes] = React.useState("");
+  const [statusRow, setStatusRow] = React.useState<TriageItem | null>(null);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["triage-queue"],
@@ -87,10 +91,28 @@ export default function TriagePage() {
     }
   });
 
+  const updateStatus = useMutation({
+    mutationFn: async (row: TriageItem) =>
+      (
+        await api.post(`/triage/${row.sourceType}/${row.id}/status`, {
+          status: statusTarget,
+          triageNotes: statusNotes.trim() || undefined
+        })
+      ).data,
+    onSuccess: async () => {
+      setStatusRow(null);
+      setStatusNotes("");
+      setStatusTarget("UNDER_REVIEW");
+      await qc.invalidateQueries({ queryKey: ["triage-queue"] });
+    }
+  });
+
   const convertError = convert.error as ApiError | null;
   const convertErrorMessage = Array.isArray(convertError?.message)
     ? convertError?.message.join(", ")
     : convertError?.message;
+  const statusError = updateStatus.error as ApiError | null;
+  const statusErrorMessage = Array.isArray(statusError?.message) ? statusError?.message.join(", ") : statusError?.message;
 
   const openConvert = (row: TriageItem) => {
     setSelected(row);
@@ -102,11 +124,18 @@ export default function TriagePage() {
     setDescription(row.description);
   };
 
+  const openStatusDialog = (row: TriageItem, status: "UNDER_REVIEW" | "REJECTED") => {
+    setStatusRow(row);
+    setStatusTarget(status);
+    setStatusNotes(row.triageNotes ?? "");
+  };
+
   const convertDisabled =
     !selected ||
     !priority.trim() ||
     (targetType === "INCIDENT" && !incidentSeverity) ||
     (targetType === "TASK" && !taskDueAt);
+  const statusDisabled = !statusRow || (statusTarget === "REJECTED" && statusNotes.trim().length < 5);
 
   return (
     <Box>
@@ -120,6 +149,11 @@ export default function TriagePage() {
           {convertError ? (
             <Alert severity="error" sx={{ mb: 2 }}>
               {convertErrorMessage ?? "Failed to convert submission"}
+            </Alert>
+          ) : null}
+          {statusError ? (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {statusErrorMessage ?? "Failed to update triage status"}
             </Alert>
           ) : null}
           {!isLoading && !error && (data?.length ?? 0) === 0 ? (
@@ -141,7 +175,9 @@ export default function TriagePage() {
             </TableHead>
             <TableBody>
               {(data ?? []).map((row) => {
-                const canConvert = row.status === "NEW";
+                const canConvert = row.status === "NEW" || row.status === "UNDER_REVIEW";
+                const canSetUnderReview = row.status === "NEW";
+                const canReject = row.status === "NEW" || row.status === "UNDER_REVIEW";
                 return (
                   <TableRow key={row.id}>
                     <TableCell>
@@ -159,14 +195,33 @@ export default function TriagePage() {
                     </TableCell>
                     <TableCell>{new Date(row.createdAt).toLocaleDateString()}</TableCell>
                     <TableCell align="right">
-                      <Button
-                        size="small"
-                        variant="contained"
-                        disabled={!canManage || !canConvert || convert.isPending}
-                        onClick={() => openConvert(row)}
-                      >
-                        {canConvert ? "Convert" : "Converted"}
-                      </Button>
+                      <Stack direction="row" spacing={0.8} justifyContent="flex-end">
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          disabled={!canManage || !canSetUnderReview || updateStatus.isPending}
+                          onClick={() => openStatusDialog(row, "UNDER_REVIEW")}
+                        >
+                          Review
+                        </Button>
+                        <Button
+                          size="small"
+                          color="error"
+                          variant="outlined"
+                          disabled={!canManage || !canReject || updateStatus.isPending}
+                          onClick={() => openStatusDialog(row, "REJECTED")}
+                        >
+                          Reject
+                        </Button>
+                        <Button
+                          size="small"
+                          variant="contained"
+                          disabled={!canManage || !canConvert || convert.isPending}
+                          onClick={() => openConvert(row)}
+                        >
+                          {canConvert ? "Convert" : "Converted"}
+                        </Button>
+                      </Stack>
                     </TableCell>
                   </TableRow>
                 );
@@ -231,6 +286,32 @@ export default function TriagePage() {
             onClick={() => selected && convert.mutate(selected)}
           >
             Convert
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={!!statusRow} onClose={() => setStatusRow(null)} fullWidth maxWidth="sm">
+        <DialogTitle>{statusTarget === "UNDER_REVIEW" ? "Mark As Under Review" : "Reject Triage Item"}</DialogTitle>
+        <DialogContent>
+          <TextField
+            label={statusTarget === "REJECTED" ? "Rejection Notes (required)" : "Triage Notes"}
+            multiline
+            minRows={3}
+            fullWidth
+            sx={{ mt: 0.5 }}
+            value={statusNotes}
+            onChange={(e) => setStatusNotes(e.target.value)}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setStatusRow(null)}>Cancel</Button>
+          <Button
+            variant="contained"
+            color={statusTarget === "REJECTED" ? "error" : "primary"}
+            disabled={statusDisabled || updateStatus.isPending}
+            onClick={() => statusRow && updateStatus.mutate(statusRow)}
+          >
+            Save
           </Button>
         </DialogActions>
       </Dialog>
