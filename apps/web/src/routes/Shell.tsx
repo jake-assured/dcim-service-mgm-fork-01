@@ -56,6 +56,11 @@ const items = [
   { label: "Tasks", path: "/tasks", icon: <TaskAltIcon />, roles: Object.values(ROLES) },
   { label: "Assets", path: "/assets", icon: <StorageIcon />, roles: Object.values(ROLES) },
   { label: "Surveys & Audits", path: "/surveys", icon: <FactCheckIcon />, roles: Object.values(ROLES) },
+  { label: "Sites", path: "/sites", icon: <StorageIcon />, roles: Object.values(ROLES) },
+  { label: "Changes", path: "/changes", icon: <TaskAltIcon />, roles: Object.values(ROLES) },
+  { label: "Risks", path: "/risks", icon: <WarningAmberIcon />, roles: Object.values(ROLES) },
+  { label: "Issues", path: "/issues", icon: <WarningAmberIcon />, roles: Object.values(ROLES) },
+  { label: "Work packages", path: "/work-packages", icon: <FactCheckIcon />, roles: Object.values(ROLES) },
   { label: "Audit Trail", path: "/audit", icon: <HistoryIcon />, roles: Object.values(ROLES) },
   { label: "Clients", path: "/clients", icon: <ApartmentIcon />, roles: [...ORG_SUPER_ROLES] },
   { label: "Users", path: "/users", icon: <ManageAccountsIcon />, roles: [...ORG_SUPER_ROLES, ROLES.SERVICE_MANAGER] }
