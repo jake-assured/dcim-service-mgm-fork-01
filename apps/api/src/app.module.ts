@@ -1,3 +1,4 @@
+import { SitesModule } from "./sites/sites.module"
 import { Module } from "@nestjs/common";
 import { PrismaModule } from "./prisma/prisma.module";
 import { AuthModule } from "./auth/auth.module";
@@ -32,6 +33,7 @@ import { AuditEventsModule } from "./audit-events/audit-events.module";
     AuditEventsModule,
     IncidentsModule,
     TasksModule,
+    SitesModule,
     UsersModule
   ],
   controllers: [HealthController]
