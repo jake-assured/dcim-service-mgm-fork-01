@@ -7,6 +7,8 @@ import { Roles } from "../auth/roles.decorator"
 import { getJwtUser, resolveClientScope } from "../auth/request-context"
 import { PrismaService } from "../prisma/prisma.service"
 import { SitesService } from "./sites.service"
+import { CreateSiteDto, UpdateSiteDto } from "./dto"
+
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiTags("sites")
@@ -33,7 +35,7 @@ export class SitesController {
 
   @Post()
   @Roles(Role.ORG_OWNER, Role.ORG_ADMIN, Role.ADMIN, Role.SERVICE_MANAGER)
-  async create(@Req() req: any, @Body() dto: any, @Headers("x-client-id") requestedClientId?: string) {
+  async create(@Req() req: any, @Body() dto: CreateSiteDto, @Headers("x-client-id") requestedClientId?: string) {
     const user = getJwtUser(req)
     const clientId = await resolveClientScope(user, requestedClientId, this.prisma)
     return this.sites.createForClient(clientId, user.userId, dto)
@@ -41,7 +43,7 @@ export class SitesController {
 
   @Put(":id")
   @Roles(Role.ORG_OWNER, Role.ORG_ADMIN, Role.ADMIN, Role.SERVICE_MANAGER)
-  async update(@Req() req: any, @Param("id") id: string, @Body() dto: any, @Headers("x-client-id") requestedClientId?: string) {
+  async update(@Req() req: any, @Param("id") id: string, @Body() dto: UpdateSiteDto, @Headers("x-client-id") requestedClientId?: string) {
     const user = getJwtUser(req)
     const clientId = await resolveClientScope(user, requestedClientId, this.prisma)
     return this.sites.updateForClient(clientId, id, user.userId, dto)

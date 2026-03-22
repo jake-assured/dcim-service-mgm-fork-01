@@ -6,6 +6,7 @@ import { RolesGuard } from "../auth/roles.guard"
 import { Roles } from "../auth/roles.decorator"
 import { getJwtUser } from "../auth/request-context"
 import { CommentsService } from "./comments.service"
+import { CreateCommentDto } from "./dto"
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiTags("comments")
@@ -22,7 +23,7 @@ export class CommentsController {
 
   @Post()
   @Roles(Role.ORG_OWNER, Role.ORG_ADMIN, Role.ADMIN, Role.SERVICE_MANAGER, Role.SERVICE_DESK_ANALYST, Role.ENGINEER)
-  async create(@Req() req: any, @Body() dto: any) {
+  async create(@Req() req: any, @Body() dto: CreateCommentDto) {
     const user = getJwtUser(req)
     return this.comments.create(user.userId, dto)
   }

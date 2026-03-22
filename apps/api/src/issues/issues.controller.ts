@@ -7,6 +7,7 @@ import { Roles } from "../auth/roles.decorator"
 import { getJwtUser, resolveClientScope } from "../auth/request-context"
 import { PrismaService } from "../prisma/prisma.service"
 import { IssuesService } from "./issues.service"
+import { CreateIssueDto, UpdateIssueStatusDto } from "./dto"
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiTags("issues")
@@ -33,7 +34,7 @@ export class IssuesController {
 
   @Post()
   @Roles(Role.ORG_OWNER, Role.ORG_ADMIN, Role.ADMIN, Role.SERVICE_MANAGER, Role.SERVICE_DESK_ANALYST)
-  async create(@Req() req: any, @Body() dto: any, @Headers("x-client-id") requestedClientId?: string) {
+  async create(@Req() req: any, @Body() dto: CreateIssueDto, @Headers("x-client-id") requestedClientId?: string) {
     const user = getJwtUser(req)
     const clientId = await resolveClientScope(user, requestedClientId, this.prisma)
     return this.issues.createForClient(clientId, user.userId, dto)
@@ -41,7 +42,7 @@ export class IssuesController {
 
   @Post(":id/status")
   @Roles(Role.ORG_OWNER, Role.ORG_ADMIN, Role.ADMIN, Role.SERVICE_MANAGER, Role.SERVICE_DESK_ANALYST)
-  async updateStatus(@Req() req: any, @Param("id") id: string, @Body() dto: any, @Headers("x-client-id") requestedClientId?: string) {
+  async updateStatus(@Req() req: any, @Param("id") id: string, @Body() dto: UpdateIssueStatusDto, @Headers("x-client-id") requestedClientId?: string) {
     const user = getJwtUser(req)
     const clientId = await resolveClientScope(user, requestedClientId, this.prisma)
     return this.issues.updateStatusForClient(clientId, id, user.userId, dto)

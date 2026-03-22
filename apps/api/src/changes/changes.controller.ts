@@ -7,6 +7,8 @@ import { Roles } from "../auth/roles.decorator"
 import { getJwtUser, resolveClientScope } from "../auth/request-context"
 import { PrismaService } from "../prisma/prisma.service"
 import { ChangesService } from "./changes.service"
+import { CreateChangeDto, UpdateChangeStatusDto, AddApprovalDto, UpdateChangeDto } from "./dto"
+
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiTags("changes")
@@ -33,7 +35,7 @@ export class ChangesController {
 
   @Post()
   @Roles(Role.ORG_OWNER, Role.ORG_ADMIN, Role.ADMIN, Role.SERVICE_MANAGER, Role.SERVICE_DESK_ANALYST)
-  async create(@Req() req: any, @Body() dto: any, @Headers("x-client-id") requestedClientId?: string) {
+  async create(@Req() req: any, @Body() dto: CreateChangeDto, @Headers("x-client-id") requestedClientId?: string) {
     const user = getJwtUser(req)
     const clientId = await resolveClientScope(user, requestedClientId, this.prisma)
     return this.changes.createForClient(clientId, user.userId, dto)
@@ -41,7 +43,7 @@ export class ChangesController {
 
   @Post(":id/status")
   @Roles(Role.ORG_OWNER, Role.ORG_ADMIN, Role.ADMIN, Role.SERVICE_MANAGER, Role.SERVICE_DESK_ANALYST, Role.ENGINEER)
-  async updateStatus(@Req() req: any, @Param("id") id: string, @Body() dto: any, @Headers("x-client-id") requestedClientId?: string) {
+  async updateStatus(@Req() req: any, @Param("id") id: string, @Body() dto: UpdateChangeStatusDto, @Headers("x-client-id") requestedClientId?: string) {
     const user = getJwtUser(req)
     const clientId = await resolveClientScope(user, requestedClientId, this.prisma)
     return this.changes.updateStatusForClient(clientId, id, user.userId, dto)
@@ -49,7 +51,7 @@ export class ChangesController {
 
   @Post(":id/approve")
   @Roles(Role.ORG_OWNER, Role.ORG_ADMIN, Role.ADMIN, Role.SERVICE_MANAGER)
-  async approve(@Req() req: any, @Param("id") id: string, @Body() dto: any, @Headers("x-client-id") requestedClientId?: string) {
+  async approve(@Req() req: any, @Param("id") id: string, @Body() dto: AddApprovalDto, @Headers("x-client-id") requestedClientId?: string) {
     const user = getJwtUser(req)
     const clientId = await resolveClientScope(user, requestedClientId, this.prisma)
     return this.changes.addApproval(clientId, id, user.userId, dto)
@@ -57,7 +59,7 @@ export class ChangesController {
 
   @Put(":id")
   @Roles(Role.ORG_OWNER, Role.ORG_ADMIN, Role.ADMIN, Role.SERVICE_MANAGER)
-  async update(@Req() req: any, @Param("id") id: string, @Body() dto: any, @Headers("x-client-id") requestedClientId?: string) {
+  async update(@Req() req: any, @Param("id") id: string, @Body() dto: UpdateChangeDto, @Headers("x-client-id") requestedClientId?: string) {
     const user = getJwtUser(req)
     const clientId = await resolveClientScope(user, requestedClientId, this.prisma)
     return this.changes.updateForClient(clientId, id, user.userId, dto)

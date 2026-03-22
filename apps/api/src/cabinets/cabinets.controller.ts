@@ -7,6 +7,7 @@ import { Roles } from "../auth/roles.decorator"
 import { getJwtUser, resolveClientScope } from "../auth/request-context"
 import { PrismaService } from "../prisma/prisma.service"
 import { CabinetsService } from "./cabinets.service"
+import { CreateCabinetDto } from "./dto"
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiTags("cabinets")
@@ -25,7 +26,7 @@ export class CabinetsController {
 
   @Post()
   @Roles(Role.ORG_OWNER, Role.ORG_ADMIN, Role.ADMIN, Role.SERVICE_MANAGER, Role.ENGINEER)
-  async create(@Req() req: any, @Param("siteId") siteId: string, @Body() dto: any, @Headers("x-client-id") requestedClientId?: string) {
+  async create(@Req() req: any, @Param("siteId") siteId: string, @Body() dto: CreateCabinetDto, @Headers("x-client-id") requestedClientId?: string) {
     const user = getJwtUser(req)
     const clientId = await resolveClientScope(user, requestedClientId, this.prisma)
     return this.cabinets.createForSite(clientId, siteId, user.userId, dto)
